@@ -1,8 +1,7 @@
 'use strict';
 
-var React = require('react'),
-	ReactDOM = require( 'react-dom' ),
-	ResizeCallbackMaker = require('./ResizeCallbackMaker');
+var React = require('react');
+require('./d2l-iframe');
 
 var ResizingIframe = React.createClass({
 	propTypes: {
@@ -10,73 +9,43 @@ var ResizingIframe = React.createClass({
 		resizeCallback: React.PropTypes.func,
 		progressCallback: React.PropTypes.func
 	},
-	getInitialState: function() {
-		return {
-			iframeCleanup: null,
-			iframeOverflowY: null,
-			iframeLocation: null
-		};
+	getInitialState: function () {
+		return {};
 	},
-	componentDidMount: function() {
+	componentDidMount: function () {
+		this.frame.addEventListener('d2l-iframe-load', this.handleOnLoad);
+		this.frame.addEventListener('d2l-iframe-resize', this.callbackWrapper);
 		this.updateProgress(0);
 	},
-	updateProgress: function(progress) {
+	componentWillUnmount() {
+		this.frame.removeEventListener("d2l-iframe-load", this.testLoad);
+	},
+	updateProgress: function (progress) {
 		if (this.props.progressCallback) {
 			this.props.progressCallback(progress, 'none');
 		}
 	},
-	callbackWrapper: function(height, iframeOverflowY) {
-		this.setState({
-			iframeOverflowY: iframeOverflowY
-		});
-
+	callbackWrapper: function (e) {
+		var height = e.detail.height;
 		var sizeKnown = !!height;
 		this.props.resizeCallback(height, sizeKnown);
 	},
-	handleOnLoad: function() {
+	handleOnLoad: function () {
 		this.updateProgress(100);
-
-		if (this.props.resizeCallback) {
-			if (this.state.iframeCleanup) {
-				this.state.iframeCleanup();
-			}
-			var result = ResizeCallbackMaker.startResizingCallbacks(ReactDOM.findDOMNode(this.refs.iframe), this.callbackWrapper);
-
-			if (result && result.cleanup) {
-				this.setState({
-					iframeCleanup: result.cleanup
-				});
-			} else {
-				this.setState({
-					iframeCleanup: null
-				});
-			}
-		}
 	},
-	componentWillUnmount: function() {
-		if (this.state.iframeCleanup) {
-			this.state.iframeCleanup();
-		}
-	},
-	render: function() {
-		var style = {
-			overflowY: this.state.iframeOverflowY || ''
-		};
-
+	render: function () {
 		// HACK! HACK! HACK! d2l content looks for d2l_navbar (or d2l-navigation if on daylight)
 		return (
 			<div
 				className="resizing-iframe-container"
 			>
 				<div id="d2l_navbar" className="vui-offscreen d2l-suppress-nav"></div>
-				<iframe
-					ref="iframe"
-					onLoad={this.handleOnLoad}
+				<d2l-iframe
+					ref={e => this.frame = e}
+					class="resizing-iframe"
 					src={this.props.src}
-					style={style}
-					className="resizing-iframe"
-				>
-				</iframe>
+					resize
+				></d2l-iframe>
 			</div>
 		);
 	}
